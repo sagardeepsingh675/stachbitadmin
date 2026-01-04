@@ -18,6 +18,7 @@ import {
     BookOpen,
     Key,
     CheckCircle,
+    TrendingUp,
 } from 'lucide-react';
 import {
     getAutoBlogTopics,
@@ -33,7 +34,7 @@ import {
     type AutoBlogLog,
     type ApiKey,
 } from '../lib/supabase';
-import { generateBlogContent, testGroqConnection, type BlogGenerationResult } from '../lib/groq';
+import { generateBlogContent, testGroqConnection, researchMarketTopics, type BlogGenerationResult, type MarketResearchTopic } from '../lib/groq';
 import { getRandomImage, testUnsplashConnection, generateImageQuery, type UnsplashImage } from '../lib/unsplash';
 
 const categories = [
@@ -75,6 +76,11 @@ export default function AIBlogGenerator() {
     const [unsplashStatus, setUnsplashStatus] = useState<'untested' | 'success' | 'error'>('untested');
 
     const [newTopic, setNewTopic] = useState({ topic: '', keywords: '', category: 'Technology', target_site: 'stachbit.in' });
+
+    // Market Research state
+    const [researchedTopics, setResearchedTopics] = useState<MarketResearchTopic[]>([]);
+    const [researching, setResearching] = useState(false);
+    const [showResearch, setShowResearch] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -278,6 +284,44 @@ export default function AIBlogGenerator() {
         if (!confirm('Delete this topic?')) return;
         await deleteAutoBlogTopic(topicId);
         await loadData();
+    }
+
+    async function handleResearchMarket() {
+        setResearching(true);
+        setShowResearch(true);
+        setNotification({ type: 'info', message: 'Researching market trends...' });
+
+        const { data, error } = await researchMarketTopics({
+            targetSite: targetSite,
+            count: 5,
+        });
+
+        if (error || !data) {
+            setNotification({ type: 'error', message: error || 'Research failed' });
+        } else {
+            setResearchedTopics(data);
+            setNotification({ type: 'success', message: `Found ${data.length} trending topic ideas!` });
+        }
+
+        setResearching(false);
+    }
+
+    async function handleAddResearchedTopic(topic: MarketResearchTopic) {
+        const { error } = await createAutoBlogTopic({
+            topic: topic.topic,
+            keywords: topic.keywords,
+            category: topic.category,
+            target_site: targetSite,
+        });
+
+        if (error) {
+            setNotification({ type: 'error', message: error.message });
+        } else {
+            setNotification({ type: 'success', message: 'Topic added to your list!' });
+            // Remove from researched topics
+            setResearchedTopics(prev => prev.filter(t => t.topic !== topic.topic));
+            await loadData();
+        }
     }
 
     const hasApiKeys = groqKey && unsplashKey;
@@ -504,10 +548,20 @@ export default function AIBlogGenerator() {
                                     <Target className="w-5 h-5 text-primary-400" />
                                     SEO Topics ({topics.length})
                                 </h3>
-                                <button onClick={() => setShowAddTopic(true)} className="btn-secondary btn-sm">
-                                    <Plus className="w-4 h-4" />
-                                    Add Topic
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleResearchMarket}
+                                        disabled={researching}
+                                        className="btn-secondary btn-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30 hover:border-blue-500/50"
+                                    >
+                                        {researching ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
+                                        {researching ? 'Researching...' : 'Research Market'}
+                                    </button>
+                                    <button onClick={() => setShowAddTopic(true)} className="btn-secondary btn-sm">
+                                        <Plus className="w-4 h-4" />
+                                        Add Topic
+                                    </button>
+                                </div>
                             </div>
 
                             {showAddTopic && (
@@ -547,6 +601,52 @@ export default function AIBlogGenerator() {
                                                 Cancel
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Market Research Results */}
+                            {showResearch && researchedTopics.length > 0 && (
+                                <div className="mb-4 p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl border border-blue-500/30">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="font-medium text-white flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-blue-400" />
+                                            Market Research Suggestions
+                                        </h4>
+                                        <button
+                                            onClick={() => setShowResearch(false)}
+                                            className="p-1 hover:bg-dark-700 rounded"
+                                        >
+                                            <X className="w-4 h-4 text-dark-400" />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                        {researchedTopics.map((topic, idx) => (
+                                            <div key={idx} className="bg-dark-800/50 rounded-lg p-3">
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <p className="text-white text-sm font-medium">{topic.topic}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                                                            Score: {topic.trend_score}/10
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleAddResearchedTopic(topic)}
+                                                            className="p-1 bg-primary-500/20 hover:bg-primary-500/30 rounded text-primary-400"
+                                                            title="Add to topics"
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p className="text-dark-400 text-xs mb-2">{topic.rationale}</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    <span className="text-xs badge">{topic.category}</span>
+                                                    {topic.keywords.slice(0, 4).map((kw, i) => (
+                                                        <span key={i} className="text-xs px-1.5 py-0.5 bg-dark-700 rounded text-dark-400">{kw}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
