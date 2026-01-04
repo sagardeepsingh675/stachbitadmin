@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Ticket, Plus, Trash2, X, Edit, Copy, Check } from 'lucide-react';
+import { Ticket, Plus, Trash2, X, Copy, Check } from 'lucide-react';
 import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../lib/supabase';
 import { formatDate, copyToClipboard } from '../lib/utils';
 

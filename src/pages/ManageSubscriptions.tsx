@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Edit, Plus, Trash2, X, Check, DollarSign } from 'lucide-react';
+import { Edit, X, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/utils';
 
@@ -22,7 +22,7 @@ interface SubscriptionPlan {
 export default function ManageSubscriptions() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
-    const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+    const [, setEditingPlan] = useState<SubscriptionPlan | null>(null);
 
     useEffect(() => {
         loadPlans();
@@ -139,8 +139,8 @@ export default function ManageSubscriptions() {
                             <button
                                 onClick={() => handleToggleActive(plan)}
                                 className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${plan.is_active
-                                        ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                        : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                                     }`}
                             >
                                 {plan.is_active ? 'Active' : 'Inactive'}

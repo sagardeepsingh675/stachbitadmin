@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, Search, Mail, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Search, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface AnalyticsData {
@@ -30,7 +30,7 @@ export default function Analytics() {
         const now = new Date();
         const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        // Note: endOfLastMonth removed as it was unused
 
         // Users this month
         const { count: usersThisMonth } = await supabase
@@ -178,8 +178,8 @@ export default function Analytics() {
                             key={p}
                             onClick={() => setPeriod(p)}
                             className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${period === p
-                                    ? 'bg-primary-500 text-white'
-                                    : 'text-dark-400 hover:text-white'
+                                ? 'bg-primary-500 text-white'
+                                : 'text-dark-400 hover:text-white'
                                 }`}
                         >
                             {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : '90 Days'}

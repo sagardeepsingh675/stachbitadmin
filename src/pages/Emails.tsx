@@ -10,8 +10,11 @@ interface EmailTemplate {
     subject: string;
     body_html: string;
     body_text: string | null;
-    category: string | null;
-    is_system: boolean;
+    category?: string | null;
+    is_system?: boolean;
+    variables?: string[];
+    is_default?: boolean;
+    use_count?: number;
     created_at: string;
     updated_at: string;
 }

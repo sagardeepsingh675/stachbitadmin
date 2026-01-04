@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HelpCircle, MessageSquare, X, Send, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { HelpCircle, MessageSquare, Send, CheckCircle } from 'lucide-react';
 import { getSupportTickets, getTicketResponses, addTicketResponse, updateTicketStatus } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatRelativeTime } from '../lib/utils';
@@ -89,11 +89,7 @@ export default function Tickets() {
         closed: 'badge-success',
     };
 
-    const priorityColors: Record<string, string> = {
-        low: 'text-green-400',
-        medium: 'text-yellow-400',
-        high: 'text-red-400',
-    };
+    // Note: priorityColors removed as it was unused
 
     return (
         <div className="space-y-6">
@@ -189,8 +185,8 @@ export default function Tickets() {
                                     <div
                                         key={response.id}
                                         className={`rounded-lg p-4 ${response.is_admin
-                                                ? 'bg-primary-500/10 border border-primary-500/30 ml-8'
-                                                : 'bg-dark-800/50 mr-8'
+                                            ? 'bg-primary-500/10 border border-primary-500/30 ml-8'
+                                            : 'bg-dark-800/50 mr-8'
                                             }`}
                                     >
                                         <div className="flex items-center gap-2 mb-2">

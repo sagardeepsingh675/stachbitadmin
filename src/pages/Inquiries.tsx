@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Inbox, Eye, CheckCircle, X, Mail, Phone, Building, MessageSquare } from 'lucide-react';
+import { Inbox, Eye, X, Mail, Phone, Building, MessageSquare } from 'lucide-react';
 import { getWebsiteInquiries, updateWebsiteInquiry } from '../lib/supabase';
 import { formatDate, formatRelativeTime } from '../lib/utils';
 
@@ -212,8 +212,8 @@ export default function Inquiries() {
                                             key={status}
                                             onClick={() => handleUpdateStatus(selectedInquiry.id, status)}
                                             className={`px-3 py-2 text-xs rounded-lg border transition-all ${selectedInquiry.status === status
-                                                    ? 'bg-primary-500/20 border-primary-500 text-primary-400'
-                                                    : 'border-dark-600 text-dark-300 hover:border-dark-500'
+                                                ? 'bg-primary-500/20 border-primary-500 text-primary-400'
+                                                : 'border-dark-600 text-dark-300 hover:border-dark-500'
                                                 }`}
                                         >
                                             {status.replace('_', ' ')}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FolderKanban, Plus, Trash2, X, Edit, ExternalLink, Image, Star, GripVertical } from 'lucide-react';
+import { FolderKanban, Plus, Trash2, X, Edit, ExternalLink, Image, Star } from 'lucide-react';
 import { getPortfolioProjects, createPortfolioProject, updatePortfolioProject, deletePortfolioProject, supabase } from '../lib/supabase';
 
 interface Project {
@@ -65,12 +65,12 @@ export default function Portfolio() {
 
         const projectData = {
             title: formData.title,
-            description: formData.description || null,
+            description: formData.description || undefined,
             service_type: formData.service_type,
-            client_name: formData.client_name || null,
-            image_url: formData.image_url || null,
-            project_url: formData.project_url || null,
-            technologies: formData.technologies ? formData.technologies.split(',').map(t => t.trim()) : null,
+            client_name: formData.client_name || undefined,
+            image_url: formData.image_url || undefined,
+            project_url: formData.project_url || undefined,
+            technologies: formData.technologies ? formData.technologies.split(',').map(t => t.trim()) : undefined,
             is_featured: formData.is_featured,
             is_active: true,
         };
@@ -394,8 +394,8 @@ export default function Portfolio() {
                                     <button
                                         onClick={() => handleToggleActive(project)}
                                         className={`px-3 py-1 text-xs rounded-lg ${project.is_active
-                                                ? 'bg-green-500/20 text-green-400'
-                                                : 'bg-red-500/20 text-red-400'
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : 'bg-red-500/20 text-red-400'
                                             }`}
                                     >
                                         {project.is_active ? 'Active' : 'Hidden'}

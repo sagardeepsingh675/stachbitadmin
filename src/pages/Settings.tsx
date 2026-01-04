@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, RefreshCw, Globe, Palette, Mail, Shield, Image } from 'lucide-react';
+import { Settings as SettingsIcon, Save, RefreshCw, Globe, Palette, Image } from 'lucide-react';
 import { getSiteSettings, updateSiteSetting, supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
