@@ -19,6 +19,7 @@ import {
     BookOpen,
     Sparkles,
     Phone,
+    Server,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getInitials } from '../../lib/utils';
@@ -35,6 +36,7 @@ const adminLinks = [
     { name: 'AI Blog Generator', href: '/ai-blog', icon: Sparkles },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Email Templates', href: '/emails', icon: Mail },
+    { name: 'SMTP Settings', href: '/smtp-settings', icon: Server },
     { name: 'System Logs', href: '/logs', icon: FileText },
     { name: 'Contact Settings', href: '/contact-settings', icon: Phone },
     { name: 'Site Settings', href: '/settings', icon: Settings },

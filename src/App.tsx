@@ -20,6 +20,7 @@ import Emails from './pages/Emails';
 import Logs from './pages/Logs';
 import Settings from './pages/Settings';
 import ContactSettings from './pages/ContactSettings';
+import SmtpSettings from './pages/SmtpSettings';
 
 // Components
 import LoadingScreen from './components/ui/LoadingScreen';
@@ -88,6 +89,7 @@ function App() {
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/logs" element={<Logs />} />
                 <Route path="/contact-settings" element={<ContactSettings />} />
+                <Route path="/smtp-settings" element={<SmtpSettings />} />
                 <Route path="/settings" element={<Settings />} />
             </Route>
 
