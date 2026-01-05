@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
     Mail,
-    Server,
-    Key,
     Send,
     Save,
     Loader2,
@@ -11,16 +9,12 @@ import {
     Plus,
     X,
     TestTube,
+    ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface SmtpConfig {
+interface EmailConfig {
     id?: string;
-    smtp_host: string;
-    smtp_port: number;
-    smtp_secure: boolean;
-    smtp_user: string;
-    smtp_password: string;
     from_email: string;
     from_name: string;
     notification_emails: string[];
@@ -28,13 +22,8 @@ interface SmtpConfig {
 }
 
 export default function SmtpSettings() {
-    const [config, setConfig] = useState<SmtpConfig>({
-        smtp_host: 'smtp.zoho.in',
-        smtp_port: 465,
-        smtp_secure: true,
-        smtp_user: '',
-        smtp_password: '',
-        from_email: '',
+    const [config, setConfig] = useState<EmailConfig>({
+        from_email: 'no-reply@notifications.stachbit.in',
         from_name: 'Stachbit',
         notification_emails: [],
         is_active: true,
@@ -64,7 +53,13 @@ export default function SmtpSettings() {
             .single();
 
         if (data && !error) {
-            setConfig(data);
+            setConfig({
+                id: data.id,
+                from_email: data.from_email || 'no-reply@notifications.stachbit.in',
+                from_name: data.from_name || 'Stachbit',
+                notification_emails: data.notification_emails || [],
+                is_active: data.is_active ?? true,
+            });
         }
         setLoading(false);
     }
@@ -74,15 +69,9 @@ export default function SmtpSettings() {
 
         try {
             if (config.id) {
-                // Update existing
                 const { error } = await supabase
                     .from('smtp_settings')
                     .update({
-                        smtp_host: config.smtp_host,
-                        smtp_port: config.smtp_port,
-                        smtp_secure: config.smtp_secure,
-                        smtp_user: config.smtp_user,
-                        smtp_password: config.smtp_password,
                         from_email: config.from_email,
                         from_name: config.from_name,
                         notification_emails: config.notification_emails,
@@ -93,25 +82,24 @@ export default function SmtpSettings() {
 
                 if (error) throw error;
             } else {
-                // Insert new
                 const { error } = await supabase
                     .from('smtp_settings')
                     .insert({
-                        smtp_host: config.smtp_host,
-                        smtp_port: config.smtp_port,
-                        smtp_secure: config.smtp_secure,
-                        smtp_user: config.smtp_user,
-                        smtp_password: config.smtp_password,
                         from_email: config.from_email,
                         from_name: config.from_name,
                         notification_emails: config.notification_emails,
                         is_active: config.is_active,
+                        smtp_host: 'resend.com',
+                        smtp_port: 443,
+                        smtp_secure: true,
+                        smtp_user: 'resend',
+                        smtp_password: 'api_key',
                     });
 
                 if (error) throw error;
             }
 
-            setNotification({ type: 'success', message: 'SMTP settings saved successfully!' });
+            setNotification({ type: 'success', message: 'Email settings saved successfully!' });
             await loadSettings();
         } catch (err) {
             console.error('Save error:', err);
@@ -125,24 +113,30 @@ export default function SmtpSettings() {
         setTesting(true);
 
         try {
-            // Call edge function to send test email
-            const { error } = await supabase.functions.invoke('send-contact-notification', {
+            const { error, data } = await supabase.functions.invoke('send-contact-notification', {
                 body: {
                     test: true,
                     name: 'Test User',
                     email: 'test@example.com',
                     subject: 'Test Email',
-                    message: 'This is a test email from Stachbit Admin Panel.',
+                    message: 'This is a test email from Stachbit Admin Panel.\n\nIf you received this, email notifications are working correctly!',
+                    source: 'Admin Panel Test',
                 },
             });
 
             if (error) throw error;
+
+            if (data?.error) {
+                throw new Error(data.error);
+            }
+
             setNotification({ type: 'success', message: 'Test email sent! Check your inbox.' });
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Test email error:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             setNotification({
                 type: 'error',
-                message: 'Failed to send test email. Make sure edge function is deployed.'
+                message: `Failed to send: ${errorMessage}`
             });
         } finally {
             setTesting(false);
@@ -150,12 +144,15 @@ export default function SmtpSettings() {
     }
 
     function addEmail() {
-        if (newEmail && !config.notification_emails.includes(newEmail)) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (newEmail && emailRegex.test(newEmail) && !config.notification_emails.includes(newEmail)) {
             setConfig({
                 ...config,
                 notification_emails: [...config.notification_emails, newEmail],
             });
             setNewEmail('');
+        } else if (newEmail && !emailRegex.test(newEmail)) {
+            setNotification({ type: 'error', message: 'Please enter a valid email address' });
         }
     }
 
@@ -179,7 +176,7 @@ export default function SmtpSettings() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">SMTP Settings</h1>
+                    <h1 className="text-2xl font-bold text-white">Email Notifications</h1>
                     <p className="text-dark-400 mt-1">
                         Configure email notifications for contact form submissions
                     </p>
@@ -187,7 +184,7 @@ export default function SmtpSettings() {
                 <div className="flex gap-3">
                     <button
                         onClick={handleTestEmail}
-                        disabled={testing || !config.id}
+                        disabled={testing || !config.id || config.notification_emails.length === 0}
                         className="btn-secondary"
                     >
                         {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
@@ -215,107 +212,26 @@ export default function SmtpSettings() {
                 </div>
             )}
 
+            {/* Info Banner */}
+            <div className="bg-primary-500/10 border border-primary-500/30 rounded-xl p-4 flex items-start gap-3">
+                <Mail className="w-5 h-5 text-primary-400 mt-0.5 flex-shrink-0" />
+                <div>
+                    <p className="text-dark-200">
+                        Emails are sent via <strong className="text-white">Resend.com</strong> using the domain{' '}
+                        <code className="bg-dark-800 px-2 py-0.5 rounded text-primary-400">notifications.stachbit.in</code>
+                    </p>
+                    <a
+                        href="https://resend.com/domains"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-400 hover:text-primary-300 text-sm inline-flex items-center gap-1 mt-2"
+                    >
+                        Manage domain in Resend <ExternalLink className="w-3 h-3" />
+                    </a>
+                </div>
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* SMTP Server Settings */}
-                <div className="card">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
-                            <Server className="w-5 h-5 text-primary-400" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-white">SMTP Server</h2>
-                            <p className="text-dark-500 text-sm">Mail server configuration</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="label">SMTP Host</label>
-                            <input
-                                type="text"
-                                value={config.smtp_host}
-                                onChange={(e) => setConfig({ ...config, smtp_host: e.target.value })}
-                                className="input"
-                                placeholder="smtp.zoho.in"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="label">Port</label>
-                                <input
-                                    type="number"
-                                    value={config.smtp_port}
-                                    onChange={(e) => setConfig({ ...config, smtp_port: parseInt(e.target.value) })}
-                                    className="input"
-                                    placeholder="465"
-                                />
-                            </div>
-                            <div>
-                                <label className="label">Security</label>
-                                <select
-                                    value={config.smtp_secure ? 'ssl' : 'none'}
-                                    onChange={(e) => setConfig({ ...config, smtp_secure: e.target.value === 'ssl' })}
-                                    className="select"
-                                >
-                                    <option value="ssl">SSL/TLS</option>
-                                    <option value="none">None</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="is_active"
-                                checked={config.is_active}
-                                onChange={(e) => setConfig({ ...config, is_active: e.target.checked })}
-                                className="w-4 h-4 rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500"
-                            />
-                            <label htmlFor="is_active" className="text-dark-300">
-                                Enable email notifications
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Authentication */}
-                <div className="card">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
-                            <Key className="w-5 h-5 text-accent-400" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-white">Authentication</h2>
-                            <p className="text-dark-500 text-sm">SMTP credentials</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="label">Username / Email</label>
-                            <input
-                                type="text"
-                                value={config.smtp_user}
-                                onChange={(e) => setConfig({ ...config, smtp_user: e.target.value })}
-                                className="input"
-                                placeholder="no-reply@stachbit.in"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="label">Password</label>
-                            <input
-                                type="password"
-                                value={config.smtp_password}
-                                onChange={(e) => setConfig({ ...config, smtp_password: e.target.value })}
-                                className="input"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                    </div>
-                </div>
-
                 {/* Sender Info */}
                 <div className="card">
                     <div className="flex items-center gap-3 mb-6">
@@ -324,7 +240,7 @@ export default function SmtpSettings() {
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-white">Sender Info</h2>
-                            <p className="text-dark-500 text-sm">From address details</p>
+                            <p className="text-dark-500 text-sm">From address for notifications</p>
                         </div>
                     </div>
 
@@ -336,8 +252,11 @@ export default function SmtpSettings() {
                                 value={config.from_email}
                                 onChange={(e) => setConfig({ ...config, from_email: e.target.value })}
                                 className="input"
-                                placeholder="no-reply@stachbit.in"
+                                placeholder="no-reply@notifications.stachbit.in"
                             />
+                            <p className="text-dark-500 text-xs mt-1">
+                                Must be from your verified domain in Resend
+                            </p>
                         </div>
 
                         <div>
@@ -347,8 +266,21 @@ export default function SmtpSettings() {
                                 value={config.from_name}
                                 onChange={(e) => setConfig({ ...config, from_name: e.target.value })}
                                 className="input"
-                                placeholder="Stachbit Contact"
+                                placeholder="Stachbit"
                             />
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-2">
+                            <input
+                                type="checkbox"
+                                id="is_active"
+                                checked={config.is_active}
+                                onChange={(e) => setConfig({ ...config, is_active: e.target.checked })}
+                                className="w-4 h-4 rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500"
+                            />
+                            <label htmlFor="is_active" className="text-dark-300">
+                                Enable email notifications
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -371,7 +303,7 @@ export default function SmtpSettings() {
                                 type="email"
                                 value={newEmail}
                                 onChange={(e) => setNewEmail(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && addEmail()}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addEmail())}
                                 className="input flex-1"
                                 placeholder="Add email address..."
                             />
@@ -384,21 +316,23 @@ export default function SmtpSettings() {
                             {config.notification_emails.map((email) => (
                                 <div
                                     key={email}
-                                    className="flex items-center justify-between px-4 py-2 bg-dark-800 rounded-lg"
+                                    className="flex items-center justify-between px-4 py-3 bg-dark-800 rounded-lg"
                                 >
                                     <span className="text-dark-200">{email}</span>
                                     <button
                                         onClick={() => removeEmail(email)}
-                                        className="p-1 hover:bg-dark-700 rounded text-dark-400 hover:text-red-400"
+                                        className="p-1 hover:bg-dark-700 rounded text-dark-400 hover:text-red-400 transition-colors"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                             ))}
                             {config.notification_emails.length === 0 && (
-                                <p className="text-dark-500 text-sm text-center py-4">
-                                    No recipients added yet
-                                </p>
+                                <div className="text-center py-8 text-dark-500">
+                                    <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">No recipients added yet</p>
+                                    <p className="text-xs mt-1">Add email addresses to receive contact form notifications</p>
+                                </div>
                             )}
                         </div>
                     </div>
